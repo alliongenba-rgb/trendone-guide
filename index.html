@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TREND-ONE 操作ガイド</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Share+Tech+Mono&display=swap');
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--border:#30363d;
+  --accent:#00d4ff;--accent2:#00ff88;--accent3:#ff6b35;
+  --text:#e6edf3;--text-muted:#7d8590;--text-dim:#4a5568;
+  --done:#00ff88;--active:#00d4ff;--todo:#333a45;--progress-bg:#21262d;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+
+/* --- LAYOUT --- */
+.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:60px 1fr;height:100vh;}
+
+/* --- HEADER --- */
+header{
+  grid-column:1/-1;grid-row:1;
+  background:var(--surface);border-bottom:2px solid var(--border);
+  display:flex;align-items:center;gap:16px;padding:0 20px;z-index:100;
+}
+.logo{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--accent);letter-spacing:2px;white-space:nowrap;flex-shrink:0;}
+.logo span{color:var(--accent2);}
+.hdr-search{flex:1;max-width:420px;position:relative;}
+.hdr-search input{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:7px 14px 7px 36px;color:var(--text);font-family:'Noto Sans JP',sans-serif;
+  font-size:13px;outline:none;transition:border-color .2s;
+}
+.hdr-search input:focus{border-color:var(--accent);}
+.hdr-search input::placeholder{color:var(--text-muted);}
+.hdr-search .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;}
+.prog-wrap{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-muted);white-space:nowrap;}
+.prog-bar{width:100px;height:5px;background:var(--progress-bg);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .5s ease;}
+.prog-pct{font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--accent);font-size:13px;}
+
+/* --- SIDEBAR --- */
+.sidebar{
+  grid-column:1;grid-row:2;
+  background:var(--surface);border-right:1px solid var(--border);
+  overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;
+}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.sb-search{padding:12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:5;}
+.sb-search-inner{position:relative;}
+.sb-search-inner input{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;
+  padding:7px 10px 7px 32px;color:var(--text);font-family:'Noto Sans JP',sans-serif;
+  font-size:12px;outline:none;transition:border-color .2s;
+}
+.sb-search-inner input:focus{border-color:var(--accent);}
+.sb-search-inner input::placeholder{color:var(--text-muted);}
+.sb-search-inner .ssi{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;pointer-events:none;}
+.toc-label{padding:10px 14px 4px;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;}
+.toc-item{
+  display:flex;align-items:center;gap:9px;padding:9px 14px;
+  cursor:pointer;transition:background .15s;border-left:3px solid transparent;user-select:none;
+}
+.toc-item:hover{background:var(--surface2);}
+.toc-item.active{background:rgba(0,212,255,.09);border-left-color:var(--accent);}
+.toc-item.done{border-left-color:var(--done);}
+.toc-item.hidden{display:none;}
+.sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.sdot.done{background:var(--done);box-shadow:0 0 5px var(--done);}
+.sdot.active{background:var(--active);box-shadow:0 0 7px var(--active);animation:pulse 2s infinite;}
+.sdot.todo{background:var(--todo);border:1px solid #555;}
+@keyframes pulse{0%,100%{box-shadow:0 0 4px var(--active);}50%{box-shadow:0 0 10px var(--active);}}
+.toc-num{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);width:18px;flex-shrink:0;}
+.toc-text{font-size:12px;color:var(--text-muted);line-height:1.35;flex:1;}
+.toc-item.active .toc-text{color:var(--text);font-weight:700;}
+.toc-item.done .toc-text{text-decoration:line-through;opacity:.6;}
+.toc-item.hmatch .toc-text em{background:rgba(0,212,255,.22);color:var(--accent);font-style:normal;border-radius:2px;padding:0 2px;}
+.tag{font-size:9px;padding:2px 5px;border-radius:3px;font-family:'Share Tech Mono',monospace;flex-shrink:0;}
+.tag-2d{background:rgba(0,255,136,.12);color:var(--accent2);border:1px solid rgba(0,255,136,.25);}
+.tag-3d{background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.25);}
+.tag-setup{background:rgba(255,107,53,.12);color:var(--accent3);border:1px solid rgba(255,107,53,.25);}
+.tag-mgr{background:rgba(148,103,189,.12);color:#c39bd3;border:1px solid rgba(148,103,189,.25);}
+.tag-trouble{background:rgba(255,59,59,.12);color:#ff7070;border:1px solid rgba(255,59,59,.25);}
+.sb-footer{padding:12px;border-top:1px solid var(--border);margin-top:auto;}
+.reset-btn{
+  width:100%;padding:7px;background:transparent;border:1px solid var(--border);
+  border-radius:5px;color:var(--text-dim);font-size:11px;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .2s;
+}
+.reset-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+
+/* --- MAIN --- */
+.main{
+  grid-column:2;grid-row:2;overflow-y:auto;overflow-x:hidden;
+  background:var(--bg);position:relative;
+}
+.main::-webkit-scrollbar{width:5px;}
+.main::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* ★ ページ切り替えの核心 ★ */
+.page{display:none;}          /* 全ページ非表示がデフォルト */
+.page.active{
+  display:block;              /* activeクラスのページのみ表示 */
+  padding:36px 44px;
+  max-width:860px;
+  animation:fadeIn .25s ease;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* --- 検索オーバーレイ --- */
+.search-ov{
+  display:none;position:absolute;top:0;left:0;right:0;
+  background:var(--surface);border-bottom:2px solid var(--accent);
+  z-index:50;max-height:60vh;overflow-y:auto;
+}
+.search-ov.open{display:block;}
+.sr-item{
+  display:flex;align-items:flex-start;gap:12px;padding:12px 20px;
+  cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;
+}
+.sr-item:hover{background:var(--surface2);}
+.sr-num{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-dim);flex-shrink:0;margin-top:3px;}
+.sr-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.sr-exc{font-size:12px;color:var(--text-muted);line-height:1.5;}
+.sr-exc em{background:rgba(0,212,255,.2);color:var(--accent);font-style:normal;border-radius:2px;padding:0 2px;}
+.no-res{padding:24px;text-align:center;color:var(--text-dim);font-size:13px;}
+.kchips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px;border-top:1px solid var(--border);}
+.kchip{
+  font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);
+  color:var(--text-muted);cursor:pointer;transition:all .2s;font-family:'Noto Sans JP',sans-serif;
+}
+.kchip:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06);}
+
+/* --- コンテンツ内 --- */
+.bc{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);font-family:'Share Tech Mono',monospace;margin-bottom:20px;}
+.bc-sep{color:var(--text-dim);}
+.bc-cur{color:var(--accent);}
+.sec-hdr{display:flex;align-items:flex-start;gap:16px;margin-bottom:28px;}
+.sec-bignum{font-family:'Share Tech Mono',monospace;font-size:52px;font-weight:700;color:var(--surface2);line-height:1;flex-shrink:0;user-select:none;}
+h1.sec-title{font-size:24px;font-weight:700;color:var(--text);line-height:1.3;margin-top:4px;}
+.sec-sub{font-size:13px;color:var(--text-muted);margin-top:4px;}
+h2{
+  font-size:14px;font-weight:700;color:var(--accent);margin:24px 0 10px;
+  padding-bottom:6px;border-bottom:1px solid var(--surface2);
+  display:flex;align-items:center;gap:7px;
+}
+h2::before{content:'';display:inline-block;width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0;}
+p{font-size:13px;line-height:1.8;color:var(--text-muted);margin-bottom:10px;}
+.sec-prog{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:12px 16px;margin-bottom:24px;display:flex;align-items:center;gap:12px;
+}
+.sp-label{font-size:11px;color:var(--text-muted);white-space:nowrap;}
+.sp-bar{flex:1;height:5px;background:var(--progress-bg);border-radius:3px;overflow:hidden;}
+.sp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .4s ease;}
+.sp-pct{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--accent);}
+.mark-btn{
+  padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface);
+  color:var(--text-muted);font-family:'Noto Sans JP',sans-serif;transition:all .2s;white-space:nowrap;
+}
+.mark-btn:hover{border-color:var(--done);color:var(--done);}
+.mark-btn.marked{background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.35);color:var(--done);}
+.steps{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.step{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:7px;padding:10px 14px;cursor:pointer;transition:all .15s;position:relative;
+}
+.step:hover{border-color:var(--accent);background:var(--surface2);}
+.step.step-done{border-color:rgba(0,255,136,.28);background:rgba(0,255,136,.04);}
+.step.step-done .step-body{opacity:.55;}
+.step-num{
+  font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);
+  background:rgba(0,212,255,.09);border:1px solid rgba(0,212,255,.25);border-radius:3px;
+  width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+}
+.step.step-done .step-num{background:rgba(0,255,136,.09);border-color:rgba(0,255,136,.25);color:var(--done);}
+.step-body{flex:1;font-size:13px;line-height:1.65;color:var(--text);}
+.step-done-mark{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--done);font-size:14px;opacity:0;transition:opacity .2s;}
+.step.step-done .step-done-mark{opacity:1;}
+code{font-family:'Share Tech Mono',monospace;background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:11px;color:var(--accent2);}
+.table-wrap{overflow-x:auto;margin-bottom:14px;border-radius:7px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{background:var(--surface2);color:var(--text-muted);font-weight:700;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:.5px;}
+td{padding:9px 12px;border-bottom:1px solid rgba(48,54,61,.5);color:var(--text-muted);line-height:1.55;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+td:first-child{color:var(--text);font-weight:500;}
+.alert{border-radius:7px;padding:12px 14px;margin:14px 0;display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.65;}
+.alert-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.alert-warn{background:rgba(255,107,53,.07);border:1px solid rgba(255,107,53,.28);color:#ffb085;}
+.alert-info{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.18);color:var(--text-muted);}
+.alert-tip{background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.18);color:#7fffc4;}
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;row-gap:6px;margin:12px 0;}
+.flow-item{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 12px;font-size:11px;color:var(--text-muted);white-space:nowrap;cursor:pointer;transition:all .15s;}
+.flow-item:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06);}
+.flow-arrow{color:var(--text-dim);padding:0 4px;font-size:13px;}
+.nav-btns{display:flex;gap:10px;margin-top:36px;padding-top:20px;border-top:1px solid var(--border);}
+.btn{display:flex;align-items:center;gap:6px;padding:9px 18px;border-radius:5px;font-family:'Noto Sans JP',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;border:none;font-weight:500;}
+.btn-prev{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);}
+.btn-prev:hover{background:var(--surface2);color:var(--text);}
+.btn-next{background:var(--accent);color:var(--bg);margin-left:auto;}
+.btn-next:hover{background:#00bbee;}
+.btn-fin{background:var(--done);color:var(--bg);margin-left:auto;}
+.btn-fin:hover{background:#00ee77;}
+/* splash */
+.splash-wrap{padding:40px 44px;max-width:860px;}
+.splash-tag{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;}
+.splash-h1{font-size:40px;font-weight:900;color:var(--text);line-height:1.2;margin-bottom:10px;}
+.splash-h1 span{color:var(--accent);}
+.splash-sub{font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:32px;}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:28px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform:scaleX(0);transform-origin:left;transition:transform .3s;}
+.card:hover{border-color:var(--accent);transform:translateY(-2px);}
+.card:hover::before{transform:scaleX(1);}
+.card-icon{font-size:22px;margin-bottom:8px;}
+.card-num{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:3px;}
+.card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.card-desc{font-size:11px;color:var(--text-muted);line-height:1.5;}
+.cstat{position:absolute;top:11px;right:11px;width:8px;height:8px;border-radius:50%;}
+.cstat.done{background:var(--done);box-shadow:0 0 5px var(--done);}
+.cstat.active{background:var(--active);box-shadow:0 0 7px var(--active);animation:pulse 2s infinite;}
+.cstat.todo{background:var(--todo);border:1px solid #555;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">TREND<span>-ONE</span> ガイド</div>
+  <div class="hdr-search">
+    <span class="si">🔍</span>
+    <input type="text" id="headerSearch" placeholder="キーワード検索（例：ライセンス、座標、3D…）" autocomplete="off">
+  </div>
+  <div class="prog-wrap">
+    <span id="progLabel">0/10 完了</span>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <span class="prog-pct" id="progPct">0%</span>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sb-search">
+    <div class="sb-search-inner">
+      <span class="ssi">🔍</span>
+      <input type="text" id="sideSearch" placeholder="目次を絞り込む..." autocomplete="off">
+    </div>
+  </div>
+  <div class="toc-label">目次 — 操作ステップ</div>
+  <div id="tocList"></div>
+  <div class="sb-footer">
+    <button class="reset-btn" onclick="resetProgress()">⟳ 進捗をすべてリセット</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main" id="mainArea">
+
+  <!-- 検索オーバーレイ -->
+  <div class="search-ov" id="searchOv">
+    <div id="searchRes"></div>
+    <div class="kchips" id="kchips">
+      <span class="kchip" onclick="doSearch('ライセンス')">ライセンス</span>
+      <span class="kchip" onclick="doSearch('インストール')">インストール</span>
+      <span class="kchip" onclick="doSearch('現場作成')">現場作成</span>
+      <span class="kchip" onclick="doSearch('座標')">座標</span>
+      <span class="kchip" onclick="doSearch('SIMA')">SIMA</span>
+      <span class="kchip" onclick="doSearch('2D図面')">2D図面</span>
+      <span class="kchip" onclick="doSearch('3D')">3D</span>
+      <span class="kchip" onclick="doSearch('PDF')">PDF出力</span>
+      <span class="kchip" onclick="doSearch('エラー')">エラー</span>
+      <span class="kchip" onclick="doSearch('バックアップ')">バックアップ</span>
+    </div>
+  </div>
+
+  <!-- ページ0: トップ -->
+  <div class="page" id="page-0">
+    <div class="splash-wrap">
+      <div class="splash-tag">操作ガイド / OPERATION GUIDE</div>
+      <h1 class="splash-h1">TREND<span>-ONE</span><br>はじめてガイド</h1>
+      <p class="splash-sub">測量CADが初めての方でも、この順番通りに進めることで<br>2D図面・3Dモデルの成果物完成まで到達できます。<br>読みたいチャプターをクリックしてください。</p>
+      <div class="card-grid" id="splashCards"></div>
+      <div class="alert alert-info">
+        <span class="alert-icon">ℹ</span>
+        <div>各チャプターは上から順番に進めてください。手順ステップをクリックすると完了マークが付きます。進捗はブラウザに自動保存されます。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ページ1〜10（JSで生成） -->
+  <div id="pagesWrap"></div>
+
+</main>
+</div>
+
+<script>
+// ========== データ ==========
+const SECS = [
+  {id:1,title:"この製品は何か？",sub:"経営者・導入担当者向け概要",tag:"mgr",tagL:"経営向け",icon:"🏢",
+   kw:["概要","経営","BIM","CIM","ライセンス","費用","導入","Ver.9","製品"],
+   content:`<h2>TREND-ONEとは</h2>
+<p>福井コンピュータが開発・販売する<strong>測量CADシステム</strong>です。測量・設計業・土地家屋調査士業向けで、全国約25,000社が導入。最新版はVer.9（2025年5月リリース）。</p>
+<div class="table-wrap"><table>
+<tr><th>確認ポイント</th><th>内容</th></tr>
+<tr><td>できること</td><td>測量データ管理・計算 ／ 2D図面作成（平面図・地積測量図等） ／ 3Dモデル作成・出力</td></tr>
+<tr><td>使う人</td><td>測量士・土地家屋調査士・新入担当者</td></tr>
+<tr><td>ライセンス形態</td><td>ネット認証（占有・LAN・共有）またはUSBプロテクト。1ライセンス1同時使用が原則</td></tr>
+<tr><td>費用目安</td><td>540,000円〜（税別）</td></tr>
+<tr><td>最新対応</td><td>ジオイド2024・測地成果2024対応。公共測量業務で適用必須</td></tr>
+</table></div>
+<h2>全体の作業フロー</h2>
+<p>以下の順番で進めます。各ボタンをクリックするとそのチャプターへ移動できます。</p>
+<div class="flow">
+<div class="flow-item" onclick="goTo(2)">② インストール・認証</div><div class="flow-arrow">→</div>
+<div class="flow-item" onclick="goTo(3)">③ 画面・基本操作</div><div class="flow-arrow">→</div>
+<div class="flow-item" onclick="goTo(4)">④ 現場作成</div><div class="flow-arrow">→</div>
+<div class="flow-item" onclick="goTo(5)">⑤ 座標入力</div><div class="flow-arrow">→</div>
+<div class="flow-item" onclick="goTo(6)">⑥ 2D図面</div><div class="flow-arrow">→</div>
+<div class="flow-item" onclick="goTo(7)">⑦ 3Dモデル</div><div class="flow-arrow">→</div>
+<div class="flow-item" onclick="goTo(8)">⑧ 納品出力</div>
+</div>
+<div class="alert alert-tip"><span class="alert-icon">✅</span><div><strong>経営者確認：</strong>ライセンスは1本1台同時使用が原則。複数人で使う場合はLANライセンスまたは本数追加が必要。バックアップ運用の義務付けを担当者へ徹底すること。</div></div>`},
+
+  {id:2,title:"インストールとライセンス認証",sub:"初回セットアップ・プロダクトID設定",tag:"setup",tagL:"SETUP",icon:"⚙️",
+   kw:["インストール","ライセンス","プロダクトID","認証","セットアップ","ネット認証","占有","LAN","初回","起動"],
+   steps:[
+     {t:"プロダクトID問い合わせキー（証書記載の 6桁＋6桁）が手元にあることを確認する"},
+     {t:"インストール先PCがインターネットに接続されていることを確認する"},
+     {t:"Windowsアカウントが管理者権限であることを確認する（設定 → アカウント → 「管理者」と表示）"},
+     {t:"福井コンピュータ サポートページにアクセスする（https://const.fukuicompu.co.jp/user/products/trendone/setup.html）"},
+     {t:"「スタンドアロン運用限定：インターネットから直接インストール」のリンクをクリックしてインストーラをダウンロードする"},
+     {t:"ダウンロードした .exe をダブルクリック → 「ユーザーアカウント制御」で「はい」をクリックする"},
+     {t:"ウィザードで「次へ」→ インストール先はデフォルト（C:\\FcApp\\TREND-ONE）のまま「次へ」をクリックする"},
+     {t:"プロテクトタイプ選択：1台のみ使用 → 「ネット認証（占有）」 ／ 複数台で共用 → 「ネット認証（LAN）」"},
+     {t:"「インストール」をクリックし完了まで待つ（目安10〜20分）。「完了しました」が出たら「完了」をクリックする"},
+   ],
+   content:`<h2>ライセンス認証（初回起動時）</h2>
+<ol class="steps">
+<li class="step" onclick="tStep(this,2,90)"><div class="step-num">1</div><div class="step-body">デスクトップの「TREND-ONE」アイコンをダブルクリックして起動する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,2,91)"><div class="step-num">2</div><div class="step-body">「ネット認証ライセンス：プロダクトID認証」ダイアログが自動で表示される</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,2,92)"><div class="step-num">3</div><div class="step-body">「プロダクトID問い合わせキー」欄に証書記載の 6桁＋6桁（例：<code>ABC123-XYZ789</code>）を入力する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,2,93)"><div class="step-num">4</div><div class="step-body">「プロダクトID取得」ボタンをクリックし、IDが自動表示されたことを確認する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,2,94)"><div class="step-num">5</div><div class="step-body">「認証」ボタンをクリックし「認証が完了しました」が出たら「OK」をクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,2,95)"><div class="step-num">6</div><div class="step-body">TREND-ONEのメイン画面（現場管理画面）が起動すれば認証完了</div><span class="step-done-mark">✓</span></li>
+</ol>
+<div class="alert alert-warn"><span class="alert-icon">⚠</span><div><strong>「認証」と「解除」の違い：</strong>認証＝このPCで使えるようにする操作。解除＝別PCへ移す前にライセンスを返す操作。複数人で共用する場合は「自動解除」設定を有効にすると便利。</div></div>`},
+
+  {id:3,title:"画面の見方と基本操作",sub:"リボン・マウス・ショートカット一覧",tag:"setup",tagL:"SETUP",icon:"🖥️",
+   kw:["画面","リボン","マウス","操作","ショートカット","拡大","縮小","アンドゥ","現場管理","UI","タブ"],
+   content:`<h2>起動直後に見える「現場管理」画面とは</h2>
+<p>TREND-ONEを起動すると最初に表示される画面が「<strong>現場管理</strong>」です。左に工区（フォルダ）一覧、右に現場（案件）一覧が並んでいます。すべての作業はここから始まります。</p>
+<div class="alert alert-info"><span class="alert-icon">ℹ</span><div>画面上部にあるタブが「<strong>リボン</strong>」です。Microsoft Wordと同じ仕組みで、タブをクリックするとそのタブに対応するボタン（コマンド）が表示されます。</div></div>
+<h2>リボン（上部メニュー）のタブ一覧</h2>
+<div class="table-wrap"><table>
+<tr><th>タブ名</th><th>主な用途</th></tr>
+<tr><td>ホーム</td><td>現場の新規作成・開く・保存・コピー</td></tr>
+<tr><td>座標</td><td>座標の入力・インポート・エクスポート</td></tr>
+<tr><td>図面</td><td>2D CAD図面の作成・編集</td></tr>
+<tr><td>計算</td><td>トラバース計算・面積計算等</td></tr>
+<tr><td>出力</td><td>印刷・PDF出力・電子納品</td></tr>
+</table></div>
+<h2>マウス操作一覧</h2>
+<div class="table-wrap"><table>
+<tr><th>操作</th><th>動作</th></tr>
+<tr><td>左クリック</td><td>コマンド選択・点の確定</td></tr>
+<tr><td>右クリック</td><td>コンテキストメニュー（操作の取消・終了等）を表示</td></tr>
+<tr><td>ホイール回転</td><td>図面の拡大・縮小</td></tr>
+<tr><td>ホイール押しながらドラッグ</td><td>図面の移動（パン）</td></tr>
+<tr><td><code>Esc</code> キー</td><td>現在のコマンドをキャンセル</td></tr>
+<tr><td><code>Ctrl + Z</code></td><td>直前の操作を取り消す（アンドゥ）</td></tr>
+<tr><td><code>Ctrl + S</code></td><td>上書き保存</td></tr>
+</table></div>
+<div class="alert alert-tip"><span class="alert-icon">💡</span><div>操作が分からなくなったら、まず <code>Esc</code> キーを押してコマンドをキャンセルしてください。画面が固まったように見えるのは「コマンド待機中」の場合がほとんどです。</div></div>`},
+
+  {id:4,title:"現場（プロジェクト）の新規作成",sub:"工区・現場の作り方・座標系の設定",tag:"setup",tagL:"SETUP",icon:"📁",
+   kw:["現場","プロジェクト","新規","工区","座標系","作成","案件","フォルダ","工事番号","縮尺"],
+   steps:[
+     {t:"現場管理画面の左側「工区一覧エリア」内で右クリックする"},
+     {t:"表示されたメニューから「工区の新規作成」をクリックする"},
+     {t:"工区名（例：2025年度工事）を入力して「OK」をクリックする"},
+     {t:"リボン「ホーム」タブ →「現場」グループ →「新規」ボタンをクリックする"},
+     {t:"「現場名」を入力する（例：〇〇地区境界確定測量）"},
+     {t:"「工事番号」を入力する（例：R07-001）"},
+     {t:"「座標系」を選択する（福岡県は「第2系」。発注仕様書に記載された系番号を必ず確認すること）"},
+     {t:"「縮尺」を入力する（例：1/500）"},
+     {t:"「OK」をクリックし、現場一覧に新しい現場が追加されたことを確認する"},
+     {t:"追加された現場名をダブルクリックして現場を開く。作業ウィンドウが開けば完了"},
+   ],
+   content:`<div class="alert alert-warn"><span class="alert-icon">⚠</span><div><strong>座標系は最重要設定：</strong>日本は1〜19系に分割されています。<strong>福岡県は第2系</strong>。間違えると座標が正しい位置に表示されません。発注仕様書に記載された系番号を必ず使用してください。</div></div>
+<h2>工区と現場の役割の違い</h2>
+<div class="table-wrap"><table>
+<tr><th>単位</th><th>役割</th><th>例</th></tr>
+<tr><td>工区（親）</td><td>複数の現場をまとめる分類フォルダ</td><td>2025年度工事</td></tr>
+<tr><td>サブ工区</td><td>工区の下位分類（任意で作成）</td><td>坂井市エリア</td></tr>
+<tr><td>現場</td><td>1案件のデータ管理単位</td><td>〇〇地区境界確定測量</td></tr>
+</table></div>`},
+
+  {id:5,title:"座標データの入力・管理",sub:"手入力・SIMAインポートの両方法",tag:"2d",tagL:"2D",icon:"📍",
+   kw:["座標","座標管理","SIMA","インポート","X座標","Y座標","標高","測点","点番","入力","Tab"],
+   steps:[
+     {t:"リボン「座標」タブ →「座標管理」コマンドをクリックする"},
+     {t:"セルウィンドウ（表形式の入力画面）が開く。最下行の空白行をクリックしてカーソルを移動する"},
+     {t:"「点番」を入力する（例：1）→ Tabキーで次のセルへ移動"},
+     {t:"「点名」を入力する（例：境界点A）→ Tabキーで次のセルへ"},
+     {t:"「X座標」を入力する（例：42516.325）→ Tabキーで次のセルへ"},
+     {t:"「Y座標」を入力する（例：-71234.891）→ Tabキーで次のセルへ"},
+     {t:"「標高」を入力する（例：15.230）→ Tabキーで次のセルへ"},
+     {t:"「杭種」を選択する（例：境界点）→ Enterキーで次の行へ移動"},
+     {t:"すべての測点を同じ手順で入力し終えたら Ctrl+S で保存する"},
+   ],
+   content:`<div class="alert alert-warn"><span class="alert-icon">⚠</span><div><strong>X・Yの方向に要注意：</strong>測量業界では <strong>X＝南北方向（北が＋）、Y＝東西方向（東が＋）</strong>です。一般の地図と逆になっています。逆に入力すると図形が90度回転して表示されます。</div></div>
+<h2>SIMAファイルからインポートする場合</h2>
+<p>電子野帳や他のソフトからSIMAデータが提供されている場合は、手入力不要で取り込めます。</p>
+<ol class="steps">
+<li class="step" onclick="tStep(this,5,90)"><div class="step-num">1</div><div class="step-body">リボン「座標」タブ →「外部ファイル読込み」をクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,5,91)"><div class="step-num">2</div><div class="step-body">ファイル種別の選択で「SIMAデータ」を選択する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,5,92)"><div class="step-num">3</div><div class="step-body">インポートするSIMAファイル（拡張子 .sim）を選択して「開く」をクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,5,93)"><div class="step-num">4</div><div class="step-body">座標系が現場設定と一致していることを確認して「OK」をクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,5,94)"><div class="step-num">5</div><div class="step-body">座標管理のセルウィンドウに測点データが追加されたことを確認する</div><span class="step-done-mark">✓</span></li>
+</ol>`},
+
+  {id:6,title:"2D CAD図面の作成",sub:"平面図生成・線・文字・図枠・保存",tag:"2d",tagL:"2D",icon:"📐",
+   kw:["2D","図面","CAD","平面図","線","文字","寸法","図枠","保存","DXF","DWG","PDF","プロットマーク"],
+   steps:[
+     {t:"座標管理に測点データが登録済みであることを確認する（第5章が完了していること）"},
+     {t:"リボン「図面」タブ →「図面作成」グループ →「CAD」コマンドをクリックする"},
+     {t:"「用紙サイズ」を設定する（例：A3 ／ 発注仕様書に従う）"},
+     {t:"「縮尺」を設定する（例：1/500）"},
+     {t:"「配置する座標」で「全点」を選択する"},
+     {t:"「作成」ボタンをクリックする"},
+     {t:"CAD画面が開き、登録した座標が点（プロットマーク）として自動配置された図面が表示される"},
+   ],
+   content:`<h2>線・文字・寸法の追加操作</h2>
+<div class="table-wrap"><table>
+<tr><th>やりたい操作</th><th>手順</th></tr>
+<tr><td>線を引く</td><td>リボン「入力」タブ →「線」→ 始点クリック → 終点クリック → 右クリック「コマンド終了」</td></tr>
+<tr><td>文字を入力する</td><td>「入力」→「文字」→ 配置したい位置をクリック → テキスト入力 →「OK」</td></tr>
+<tr><td>寸法線を入れる</td><td>「入力」→「寸法」→ 起点クリック → 終点クリック → 寸法線位置をクリックして確定</td></tr>
+</table></div>
+<h2>図枠の配置手順</h2>
+<ol class="steps">
+<li class="step" onclick="tStep(this,6,90)"><div class="step-num">1</div><div class="step-body">リボン「図面」タブ →「図枠」グループ →「図枠配置」コマンドをクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,6,91)"><div class="step-num">2</div><div class="step-body">発注仕様書で指定された図枠テンプレートを選択する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,6,92)"><div class="step-num">3</div><div class="step-body">図枠が図面に自動配置される。タイトル・発注者名等のテキストをダブルクリックして編集する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,6,93)"><div class="step-num">4</div><div class="step-body"><code>Ctrl + S</code> で保存し、現場内の図面一覧に保存済み図面が表示されることを確認する</div><span class="step-done-mark">✓</span></li>
+</ol>
+<div class="alert alert-warn"><span class="alert-icon">⚠</span><div><strong>新規作成後は必ず1度保存してから閉じること：</strong>保存前にウィンドウを閉じると、図面書込みダイアログに表示されない場合があります。</div></div>`},
+
+  {id:7,title:"3D CADモデルの作成",sub:"3Dビュー表示・TREND-CORE連携",tag:"3d",tagL:"3D",icon:"🧊",
+   kw:["3D","3Dモデル","TREND-CORE","LandXML","BIM","CIM","3Dビュー","標高","地形","IFC"],
+   content:`<h2>3D作成の2つのルート</h2>
+<div class="table-wrap"><table>
+<tr><th>ルート</th><th>方法</th><th>向いているケース</th></tr>
+<tr><td>ルートA</td><td>TREND-ONE内の3D機能を使う</td><td>簡易な地形確認・境界確認用の3Dビュー</td></tr>
+<tr><td>ルートB</td><td>TREND-COREと連携する</td><td>本格的な3D土木モデル・BIM/CIM成果物</td></tr>
+</table></div>
+<h2>ルートA：TREND-ONE内で3Dビューを作成する</h2>
+<p><strong>前提：</strong>座標管理に標高値（Z値）が入力済みであること（第5章完了が必要）。</p>
+<ol class="steps">
+<li class="step" onclick="tStep(this,7,90)"><div class="step-num">1</div><div class="step-body">リボン「図面」タブ →「3Dビュー」コマンドをクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,7,91)"><div class="step-num">2</div><div class="step-body">3Dビューウィンドウが開き、登録した標高値を基にした地形モデルが表示される</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,7,92)"><div class="step-num">3</div><div class="step-body">ホイールで拡大縮小、右クリックドラッグで視点を回転させて確認する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,7,93)"><div class="step-num">4</div><div class="step-body">「出力」ボタンをクリックし、3DビューをPNG/BMP形式の画像として保存する</div><span class="step-done-mark">✓</span></li>
+</ol>
+<h2>ルートB：TREND-COREと連携して本格3Dモデルを作成する</h2>
+<ol class="steps">
+<li class="step" onclick="tStep(this,7,94)"><div class="step-num">1</div><div class="step-body">TREND-ONEで完成した2D図面をLandXML形式で出力する（「出力」タブ →「外部ファイル書込み」→「LandXML」→ 保存先を指定して「保存」）</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,7,95)"><div class="step-num">2</div><div class="step-body">TREND-COREを起動する（別途ライセンス認証済みであること）</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,7,96)"><div class="step-num">3</div><div class="step-body">TREND-COREの「ファイル」→「読込み」→「LandXML」→ 手順1で保存したファイルを選択して「開く」をクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,7,97)"><div class="step-num">4</div><div class="step-body">「3Dモデル作成」コマンドを実行し、3Dモデルを生成する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,7,98)"><div class="step-num">5</div><div class="step-body">IFC形式またはLandXML形式でエクスポートして納品用ファイルを作成する</div><span class="step-done-mark">✓</span></li>
+</ol>
+<div class="alert alert-warn"><span class="alert-icon">⚠</span><div><strong>TREND-COREは別ライセンスの製品：</strong>TREND-ONEとは別に購入・認証が必要です。BIM/CIM対応が必要かどうかは発注仕様書で確認してください。</div></div>`},
+
+  {id:8,title:"成果物の保存・出力・納品",sub:"PDF・DXF・SIMA・電子納品",tag:"2d",tagL:"出力",icon:"📤",
+   kw:["出力","PDF","DXF","DWG","SIMA","電子納品","保存","印刷","AutoCAD","納品","書き出し"],
+   content:`<h2>PDF出力（印刷用・閲覧用）</h2>
+<ol class="steps">
+<li class="step" onclick="tStep(this,8,90)"><div class="step-num">1</div><div class="step-body">出力したい図面を開いた状態で、リボン「出力」タブ →「PDF出力」をクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,8,91)"><div class="step-num">2</div><div class="step-body">用紙サイズ・向きを確認し、保存先フォルダとファイル名を指定して「保存」をクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,8,92)"><div class="step-num">3</div><div class="step-body">エクスプローラーで指定フォルダにPDFが作成されたことを確認する</div><span class="step-done-mark">✓</span></li>
+</ol>
+<h2>DXF・DWG出力（AutoCAD互換形式）</h2>
+<ol class="steps">
+<li class="step" onclick="tStep(this,8,93)"><div class="step-num">1</div><div class="step-body">「出力」タブ →「外部ファイル書込み」→「DXF」または「DWG」を選択する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,8,94)"><div class="step-num">2</div><div class="step-body">相手方の指定に応じたバージョン（例：AutoCAD 2018形式）を選択する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,8,95)"><div class="step-num">3</div><div class="step-body">保存先フォルダとファイル名を指定して「保存」をクリックする</div><span class="step-done-mark">✓</span></li>
+</ol>
+<h2>電子納品形式での出力</h2>
+<ol class="steps">
+<li class="step" onclick="tStep(this,8,96)"><div class="step-num">1</div><div class="step-body">「出力」タブ →「電子納品」コマンドをクリックする</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,8,97)"><div class="step-num">2</div><div class="step-body">発注者指定の電子納品要領（国交省基準等）を選択する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,8,98)"><div class="step-num">3</div><div class="step-body">出力先フォルダを指定して「作成」をクリックし、フォルダ構造が生成されたことを確認する</div><span class="step-done-mark">✓</span></li>
+</ol>`},
+
+  {id:9,title:"よくあるトラブルと対処法",sub:"エラー・表示異常・文字化けの解決",tag:"trouble",tagL:"Q&A",icon:"🔧",
+   kw:["トラブル","エラー","ライセンス","文字化け","表示","座標","保存","点","3D","平坦","Q&A","問題"],
+   content:`<h2>Q1：「ライセンスが見つかりません」と表示される</h2>
+<p><strong>原因：</strong>ネット認証ライセンスが別PCで使用中、またはインターネット接続が切れている。</p>
+<ol class="steps">
+<li class="step" onclick="tStep(this,9,90)"><div class="step-num">1</div><div class="step-body">PCがインターネットに接続されていることを確認する（ブラウザで任意のサイトを開いて確認）</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,9,91)"><div class="step-num">2</div><div class="step-body">他の担当者が同じIDを使用中の場合、その担当者にTREND-ONEを閉じてライセンスを解除してもらう</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,9,92)"><div class="step-num">3</div><div class="step-body">解決しない場合はサポートページのFAQを確認する（https://const.fukuicompu.co.jp/user/products/trendone/setup.html）</div><span class="step-done-mark">✓</span></li>
+</ol>
+<h2>Q2：座標を入力したのに図面に点が表示されない</h2>
+<div class="table-wrap"><table>
+<tr><th>原因</th><th>対処方法</th></tr>
+<tr><td>座標系の設定が間違っている</td><td>「ホーム」→「現場情報」で座標系を確認し、現場所在地に合った系番号に変更する</td></tr>
+<tr><td>図面の表示範囲が座標から外れている</td><td>「表示」タブ →「全体表示」をクリックし、図面全体が表示されるようにする</td></tr>
+</table></div>
+<h2>Q3：DXF/DWGをAutoCADで開くと文字化けする</h2>
+<ol class="steps">
+<li class="step" onclick="tStep(this,9,93)"><div class="step-num">1</div><div class="step-body">「出力」→「外部ファイル書込み」→「DXF/DWG」の書き出し設定画面を開く</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,9,94)"><div class="step-num">2</div><div class="step-body">「文字コード」を「Unicode（UTF-8）」に変更して再度書き出す</div><span class="step-done-mark">✓</span></li>
+</ol>
+<h2>Q4：3Dビューで地形が平坦に表示される</h2>
+<ol class="steps">
+<li class="step" onclick="tStep(this,9,95)"><div class="step-num">1</div><div class="step-body">「座標管理」を開き、各測点の「標高」列に実測値が入力されているか確認する（「0.000」ばかりなら未入力）</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,9,96)"><div class="step-num">2</div><div class="step-body">未入力の測点に正しい標高値を入力して Ctrl+S で保存する</div><span class="step-done-mark">✓</span></li>
+<li class="step" onclick="tStep(this,9,97)"><div class="step-num">3</div><div class="step-body">再度「3Dビュー」コマンドを実行する</div><span class="step-done-mark">✓</span></li>
+</ol>
+<h2>Q5：「座標系を変更しますか？」というダイアログが出る</h2>
+<p>「<strong>いいえ</strong>」をクリックしてキャンセル。発注仕様書でどちらの座標系が正しいかを確認後、現場設定を修正してから再度インポートしてください。</p>`},
+
+  {id:10,title:"サポート・バックアップ運用",sub:"問い合わせ先・データ保護・バージョンアップ",tag:"mgr",tagL:"運用",icon:"🛡️",
+   kw:["サポート","バックアップ","FAQ","バージョンアップ","Ver.9","問い合わせ","復元","リストア","保護","台帳"],
+   steps:[
+     {t:"TREND-ONEを起動し、バックアップ対象の現場を選択する"},
+     {t:"リボン「ホーム」タブ →「現場」グループ →「バックアップ」をクリックする"},
+     {t:"バックアップ先を社内NASまたはUSBメモリに指定する（PC本体と別の媒体を使用すること）"},
+     {t:"「バックアップ実行」ボタンをクリックする"},
+     {t:"「バックアップが完了しました」と表示されたことを確認する"},
+     {t:"実施日と担当者名をバックアップ台帳（紙またはExcel）に記録する"},
+   ],
+   content:`<h2>公式サポート窓口</h2>
+<div class="table-wrap"><table>
+<tr><th>窓口</th><th>URL</th></tr>
+<tr><td>お客様サポートページ</td><td><code>const.fukuicompu.co.jp/user/products/trendone/</code></td></tr>
+<tr><td>インストール・認証FAQ</td><td><code>const.fukuicompu.co.jp/user/products/trendone/setup.html</code></td></tr>
+<tr><td>操作マニュアル一覧</td><td><code>const.fukuicompu.co.jp/user/products/trendone/manual.html</code></td></tr>
+</table></div>
+<div class="alert alert-warn"><span class="alert-icon">⚠</span><div><strong>経営者へ：</strong>過去データの消失は顧客への成果物再提出・再測量という直接損害につながります。バックアップ台帳の整備を担当者に義務付けてください。</div></div>
+<h2>バージョンアップの注意</h2>
+<p>バージョンアップを行う前に、<strong>必ず全現場データのバックアップを完了</strong>させてから実施してください。バージョンアップ中はTREND-ONEを使用しないこと。</p>
+<div class="alert alert-tip"><span class="alert-icon">✅</span><div>公共測量業務では、ジオイド2024・測地成果2024対応のVer.9への更新が法的に求められます。早期バージョンアップを推奨します。</div></div>`}
+];
+
+// ========== 状態管理 ==========
+const SK='trendone_v3';
+function loadS(){try{return JSON.parse(localStorage.getItem(SK))||{};}catch{return{};}}
+function saveS(s){try{localStorage.setItem(SK,JSON.stringify(s));}catch{}}
+let S=loadS();
+if(!S.done)  S.done={};
+if(!S.steps) S.steps={};
+if(!S.cur)   S.cur=0;
+
+// ========== TOC構築 ==========
+function buildTOC(){
+  const list=document.getElementById('tocList');
+  list.innerHTML='';
+  // トップ
+  const top=document.createElement('div');
+  top.className='toc-item'+(S.cur===0?' active':'');
+  top.innerHTML=`<div class="sdot ${S.cur===0?'active':'todo'}"></div><div class="toc-num">00</div><div class="toc-text">トップ / 全体概要</div>`;
+  top.onclick=()=>goTo(0);
+  list.appendChild(top);
+  SECS.forEach(sec=>{
+    const isDone=!!S.done[sec.id], isActive=S.cur===sec.id;
+    const el=document.createElement('div');
+    el.className='toc-item'+(isActive?' active':'')+(isDone?' done':'');
+    el.dataset.kw=(sec.kw||[]).join(' ')+' '+sec.title+' '+sec.sub;
+    el.innerHTML=`<div class="sdot ${isDone?'done':isActive?'active':'todo'}"></div><div class="toc-num">${String(sec.id).padStart(2,'0')}</div><div class="toc-text">${sec.title}</div><span class="tag tag-${sec.tag}">${sec.tagL}</span>`;
+    el.onclick=()=>goTo(sec.id);
+    list.appendChild(el);
+  });
+}
+
+// ========== ページ生成 ==========
+function buildPages(){
+  const wrap=document.getElementById('pagesWrap');
+  wrap.innerHTML='';
+  SECS.forEach((sec,idx)=>{
+    const div=document.createElement('div');
+    div.className='page';
+    div.id=`page-${sec.id}`;
+    const stepCount=sec.steps?sec.steps.length:0;
+    const doneCount=sec.steps?sec.steps.filter((_,i)=>S.steps[`${sec.id}-${i}`]).length:0;
+    const pct=stepCount>0?Math.round((doneCount/stepCount)*100):(S.done[sec.id]?100:0);
+    let stepsHtml='';
+    if(sec.steps){
+      stepsHtml=`<h2>操作手順</h2><ol class="steps">`+
+        sec.steps.map((st,i)=>`<li class="step${S.steps[`${sec.id}-${i}`]?' step-done':''}" onclick="tStep(this,${sec.id},${i})"><div class="step-num">${i+1}</div><div class="step-body">${st.t}</div><span class="step-done-mark">✓</span></li>`).join('')+
+        `</ol>`;
+    }
+    const prevId=idx>0?SECS[idx-1].id:0;
+    const nextId=idx<SECS.length-1?SECS[idx+1].id:-1;
+    div.innerHTML=`
+      <div class="bc"><span style="cursor:pointer;color:var(--text-muted)" onclick="goTo(0)">トップ</span><span class="bc-sep">›</span><span class="bc-cur">第${sec.id}章　${sec.title}</span></div>
+      <div class="sec-hdr">
+        <div class="sec-bignum">${String(sec.id).padStart(2,'0')}</div>
+        <div><span class="tag tag-${sec.tag}" style="margin-bottom:5px;display:inline-block">${sec.tagL}</span><h1 class="sec-title">${sec.title}</h1><p class="sec-sub">${sec.sub}</p></div>
+      </div>
+      <div class="sec-prog">
+        <span class="sp-label">${stepCount>0?'ステップ進捗':'チャプター状態'}</span>
+        <div class="sp-bar"><div class="sp-fill" style="width:${pct}%" id="spf-${sec.id}"></div></div>
+        <span class="sp-pct" id="spp-${sec.id}">${pct}%</span>
+        <button class="mark-btn${S.done[sec.id]?' marked':''}" onclick="tDone(${sec.id})" id="mb-${sec.id}">${S.done[sec.id]?'✓ 完了済み':'完了にする'}</button>
+      </div>
+      ${stepsHtml}
+      ${sec.content||''}
+      <div class="nav-btns">
+        <button class="btn btn-prev" onclick="goTo(${prevId})">← ${prevId===0?'トップへ':'第'+prevId+'章'}</button>
+        ${nextId>=0?`<button class="btn btn-next" onclick="goTo(${nextId})">第${nextId}章へ →</button>`:`<button class="btn btn-fin" onclick="goTo(0)">🎉 全章完了！トップへ</button>`}
+      </div>`;
+    wrap.appendChild(div);
+  });
+}
+
+// ========== スプラッシュ ==========
+function buildSplash(){
+  const g=document.getElementById('splashCards');
+  g.innerHTML='';
+  SECS.forEach(sec=>{
+    const isDone=!!S.done[sec.id], isActive=S.cur===sec.id&&sec.id!==0;
+    const c=document.createElement('div');
+    c.className='card';
+    c.innerHTML=`<div class="cstat ${isDone?'done':isActive?'active':'todo'}"></div><div class="card-icon">${sec.icon}</div><div class="card-num">第${sec.id}章</div><div class="card-title">${sec.title}</div><div class="card-desc">${sec.sub}</div>`;
+    c.onclick=()=>goTo(sec.id);
+    g.appendChild(c);
+  });
+}
+
+// ========== ページ切り替え（核心部分） ==========
+function goTo(id){
+  // 1. 全ページのactiveクラスを除去（完全非表示）
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  // 2. 対象ページのみactiveに（表示）
+  const target=document.getElementById(`page-${id}`);
+  if(target) target.classList.add('active');
+  // 3. スクロールをトップへ
+  const main=document.getElementById('mainArea');
+  main.scrollTop=0;
+  // 4. 状態保存・TOC更新
+  S.cur=id;
+  saveS(S);
+  buildTOC();
+  if(id===0) buildSplash();
+  closeSearch();
+}
+
+// ========== ステップ完了 ==========
+function tStep(el,secId,stepIdx){
+  const key=`${secId}-${stepIdx}`;
+  if(S.steps[key]){delete S.steps[key];el.classList.remove('step-done');}
+  else{S.steps[key]=true;el.classList.add('step-done');}
+  saveS(S);
+  const sec=SECS.find(s=>s.id===secId);
+  if(sec&&sec.steps){
+    const total=sec.steps.length;
+    const done=sec.steps.filter((_,i)=>S.steps[`${secId}-${i}`]).length;
+    const pct=Math.round((done/total)*100);
+    const f=document.getElementById(`spf-${secId}`);
+    const p=document.getElementById(`spp-${secId}`);
+    if(f) f.style.width=pct+'%';
+    if(p) p.textContent=pct+'%';
+  }
+  updateGlobal();
+}
+
+// ========== チャプター完了 ==========
+function tDone(secId){
+  if(S.done[secId]) delete S.done[secId]; else S.done[secId]=true;
+  saveS(S);
+  const btn=document.getElementById(`mb-${secId}`);
+  if(btn){btn.classList.toggle('marked',!!S.done[secId]);btn.textContent=S.done[secId]?'✓ 完了済み':'完了にする';}
+  const f=document.getElementById(`spf-${secId}`);
+  if(f) f.style.width=(S.done[secId]?100:0)+'%';
+  buildTOC(); updateGlobal();
+}
+
+// ========== 全体進捗 ==========
+function updateGlobal(){
+  const total=SECS.length;
+  const done=Object.keys(S.done).filter(k=>S.done[k]).length;
+  const pct=Math.round((done/total)*100);
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('progPct').textContent=pct+'%';
+  document.getElementById('progLabel').textContent=`${done}/${total} 完了`;
+}
+
+// ========== リセット ==========
+function resetProgress(){
+  if(!confirm('進捗をすべてリセットしますか？')) return;
+  localStorage.removeItem(SK);
+  location.reload();
+}
+
+// ========== 検索 ==========
+function doSearch(q){document.getElementById('headerSearch').value=q;runSearch(q);}
+function runSearch(q){
+  const ov=document.getElementById('searchOv');
+  const res=document.getElementById('searchRes');
+  const chips=document.getElementById('kchips');
+  if(!q||q.length<1){closeSearch();return;}
+  ov.classList.add('open');
+  chips.style.display='none';
+  const ql=q.toLowerCase();
+  const hits=[];
+  SECS.forEach(sec=>{
+    let score=0,excerpt='';
+    if(sec.title.toLowerCase().includes(ql)) score+=10;
+    if(sec.sub.toLowerCase().includes(ql)) score+=5;
+    (sec.kw||[]).forEach(kw=>{if(kw.toLowerCase().includes(ql)) score+=3;});
+    const body=((sec.content||'').replace(/<[^>]+>/g,' ')+(sec.steps||[]).map(s=>s.t).join(' ')).toLowerCase();
+    if(body.includes(ql)){
+      score+=2;
+      const full=(sec.content||'').replace(/<[^>]+>/g,' ')+(sec.steps||[]).map(s=>s.t).join(' ');
+      const i=full.toLowerCase().indexOf(ql);
+      const s=Math.max(0,i-30),e=Math.min(full.length,i+q.length+60);
+      excerpt=full.substring(s,e).replace(/\s+/g,' ').replace(new RegExp(q.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&'),'gi'),'<em>$&</em>');
+    }
+    if(score>0) hits.push({sec,score,excerpt});
+  });
+  hits.sort((a,b)=>b.score-a.score);
+  if(hits.length===0){
+    res.innerHTML=`<div class="no-res">「${q}」に一致する項目が見つかりませんでした</div>`;
+  } else {
+    res.innerHTML=hits.map(h=>`<div class="sr-item" onclick="goTo(${h.sec.id})"><div class="sr-num">第${h.sec.id}章</div><div><div class="sr-title">${h.sec.icon} ${h.sec.title}</div><div class="sr-exc">${h.excerpt||h.sec.sub}</div></div><span class="tag tag-${h.sec.tag}" style="align-self:center">${h.sec.tagL}</span></div>`).join('');
+  }
+  filterTOC(q);
+}
+function filterTOC(q){
+  document.querySelectorAll('#tocList .toc-item').forEach(item=>{
+    if(!q){item.classList.remove('hidden','hmatch');const t=item.querySelector('.toc-text');if(t)t.innerHTML=t.textContent;return;}
+    const kw=item.dataset.kw||'';
+    const t=item.querySelector('.toc-text');
+    const raw=t?t.textContent:'';
+    if(kw.toLowerCase().includes(q.toLowerCase())||raw.toLowerCase().includes(q.toLowerCase())){
+      item.classList.remove('hidden');item.classList.add('hmatch');
+      if(t) t.innerHTML=raw.replace(new RegExp(q.replace(/[-\/\\^$*+?.()|[\]{}]/g,'\\$&'),'gi'),'<em>$&</em>');
+    } else {item.classList.add('hidden');item.classList.remove('hmatch');}
+  });
+}
+function closeSearch(){
+  document.getElementById('searchOv').classList.remove('open');
+  document.getElementById('headerSearch').value='';
+  filterTOC('');
+  document.getElementById('kchips').style.display='flex';
+}
+
+// ========== イベント ==========
+document.getElementById('headerSearch').addEventListener('input',e=>runSearch(e.target.value.trim()));
+document.getElementById('sideSearch').addEventListener('input',e=>filterTOC(e.target.value.trim()));
+document.addEventListener('keydown',e=>{if(e.key==='Escape') closeSearch();});
+document.getElementById('mainArea').addEventListener('click',e=>{
+  const ov=document.getElementById('searchOv');
+  if(ov.classList.contains('open')&&!ov.contains(e.target)&&e.target.id!=='headerSearch') closeSearch();
+});
+
+// ========== 初期化 ==========
+buildTOC();
+buildPages();
+buildSplash();
+goTo(S.cur||0);
+updateGlobal();
+</script>
+</body>
+</html>
