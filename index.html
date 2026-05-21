@@ -225,6 +225,148 @@ td:first-child{color:var(--text);font-weight:500;}
 .cstat.done{background:var(--done);box-shadow:0 0 5px var(--done);}
 .cstat.active{background:var(--active);box-shadow:0 0 7px var(--active);animation:pulse 2s infinite;}
 .cstat.todo{background:var(--todo);border:1px solid #555;}
+
+/* ========== スマホ縦画面対応 ========== */
+@media (max-width: 768px) {
+
+  /* グリッドを1カラムに変更 */
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 56px auto 1fr;
+    height: 100vh;
+  }
+
+  /* ヘッダー */
+  header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .logo { font-size: 13px; letter-spacing: 1px; }
+  .hdr-search { max-width: none; flex: 1; }
+  .hdr-search input { font-size: 12px; padding: 6px 10px 6px 30px; }
+  .prog-wrap { display: none; } /* スマホでは進捗は省略 */
+
+  /* サイドバー：デフォルト非表示、開閉式に */
+  .sidebar {
+    grid-column: 1;
+    grid-row: 2;
+    display: none;
+    position: static;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar.sp-open {
+    display: flex;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  /* メニューボタン（スマホ専用） */
+  .sp-menu-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  /* メイン */
+  .main {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  /* ページコンテンツ */
+  .page.active {
+    padding: 20px 16px 40px;
+    max-width: 100%;
+  }
+
+  /* スプラッシュ */
+  .splash-wrap { padding: 20px 16px; }
+  .splash-h1 { font-size: 28px; }
+  .splash-sub { font-size: 13px; }
+  .card-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card { padding: 12px; }
+  .card-icon { font-size: 18px; margin-bottom: 6px; }
+  .card-title { font-size: 12px; }
+  .card-desc { display: none; } /* カード説明は省略 */
+
+  /* セクションヘッダー */
+  .sec-hdr { gap: 10px; }
+  .sec-bignum { font-size: 36px; }
+  h1.sec-title { font-size: 18px; }
+  .sec-sub { font-size: 12px; }
+
+  /* 見出し */
+  h2 { font-size: 13px; margin: 18px 0 8px; }
+
+  /* 進捗バー */
+  .sec-prog {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .sp-label { font-size: 10px; width: 100%; }
+  .sp-bar { flex: 1; }
+  .mark-btn { font-size: 11px; padding: 5px 10px; }
+
+  /* ステップ */
+  .step { padding: 10px 12px; gap: 10px; }
+  .step-body { font-size: 13px; line-height: 1.6; }
+  .step-num { width: 22px; height: 22px; font-size: 10px; }
+
+  /* テーブル */
+  table { font-size: 12px; }
+  th { padding: 7px 10px; font-size: 10px; }
+  td { padding: 7px 10px; }
+
+  /* アラート */
+  .alert { font-size: 12px; padding: 10px 12px; }
+
+  /* フロー */
+  .flow-item { font-size: 11px; padding: 5px 10px; }
+
+  /* ナビボタン */
+  .nav-btns { gap: 8px; margin-top: 24px; padding-top: 16px; }
+  .btn { font-size: 12px; padding: 9px 14px; }
+  .btn-next, .btn-fin { margin-left: auto; }
+
+  /* 検索オーバーレイ */
+  .search-ov { position: fixed; top: 56px; left: 0; right: 0; z-index: 200; }
+  .sr-item { padding: 10px 14px; }
+  .sr-title { font-size: 13px; }
+  .sr-exc { font-size: 11px; }
+  .kchips { padding: 8px 14px; gap: 5px; }
+  .kchip { font-size: 10px; padding: 3px 8px; }
+
+  /* TOCアイテム（サイドバー内） */
+  .toc-item { padding: 11px 14px; }
+  .toc-text { font-size: 13px; }
+
+  /* パンくず */
+  .bc { font-size: 10px; margin-bottom: 14px; }
+}
+
+/* タブレット対応（769px〜1024px） */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .app { grid-template-columns: 240px 1fr; }
+  .page.active { padding: 28px 32px; }
+  .splash-h1 { font-size: 32px; }
+  .card-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
 </style>
 </head>
 <body>
@@ -233,6 +375,7 @@ td:first-child{color:var(--text);font-weight:500;}
 <!-- HEADER -->
 <header>
   <div class="logo">TREND<span>-ONE</span> ガイド</div>
+  <div class="sp-menu-btn" id="spMenuBtn" onclick="toggleSPMenu()" style="display:none">☰</div>
   <div class="hdr-search">
     <span class="si">🔍</span>
     <input type="text" id="headerSearch" placeholder="キーワード検索（例：ライセンス、座標、3D…）" autocomplete="off">
@@ -245,7 +388,7 @@ td:first-child{color:var(--text);font-weight:500;}
 </header>
 
 <!-- SIDEBAR -->
-<nav class="sidebar">
+<nav class="sidebar" id="sidebar">
   <div class="sb-search">
     <div class="sb-search-inner">
       <span class="ssi">🔍</span>
@@ -769,6 +912,40 @@ buildPages();
 buildSplash();
 goTo(S.cur||0);
 updateGlobal();
+
+// ========== スマホメニュー開閉 ==========
+function toggleSPMenu(){
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('sp-open');
+  document.getElementById('spMenuBtn').textContent = sb.classList.contains('sp-open') ? '✕' : '☰';
+}
+
+// スマホ判定：メニューボタン表示切り替え
+function checkMobile(){
+  const btn = document.getElementById('spMenuBtn');
+  if(window.innerWidth <= 768){
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+    // PC表示に戻ったらサイドバーを常時表示
+    const sb = document.getElementById('sidebar');
+    sb.classList.remove('sp-open');
+  }
+}
+window.addEventListener('resize', checkMobile);
+checkMobile();
+
+// スマホでTOCアイテムクリック後にメニューを閉じる
+const origGoTo = goTo;
+goTo = function(id){
+  origGoTo(id);
+  if(window.innerWidth <= 768){
+    const sb = document.getElementById('sidebar');
+    sb.classList.remove('sp-open');
+    document.getElementById('spMenuBtn').textContent = '☰';
+  }
+};
+
 </script>
 </body>
 </html>
